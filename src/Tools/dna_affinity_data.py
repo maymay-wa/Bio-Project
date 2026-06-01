@@ -8,11 +8,10 @@ import numpy as np
 import pandas
 from pathlib import Path
 from typing import Optional
-import warnings
 
 
 class DNAAffinityDataProcessor:
-    """Process DNA sequences, DBPs, and building affinity data."""
+    """Process DNA sequences, DBPs, and binding affinity data."""
 
     def __init__(
         self,
@@ -20,7 +19,6 @@ class DNAAffinityDataProcessor:
         dbps_path: str | Path = "../Data/training_DBPs.txt",
         affinity_path: str | Path = "../Data/training_data.txt",
         sequence_length: int = 36,
-        cleaned_data_dir: str | Path = "../cleaned_data",
     ):
         """Initialize paths and sequence configuration.
 
@@ -34,124 +32,16 @@ class DNAAffinityDataProcessor:
             Path to file containing space-delimited affinity matrix.
         sequence_length : int
             Expected length of DNA sequences. Default: 36.
-        cleaned_data_dir : str | Path
-            Directory to store cleaned CSV data. Default: "../cleaned_data".
         """
         self.sequences_path = Path(sequences_path)
         self.dbps_path = Path(dbps_path)
         self.affinity_path = Path(affinity_path)
         self.sequence_length = sequence_length
-        self.cleaned_data_dir = Path(cleaned_data_dir)
 
         self.sequences: list[str] = []
         self.dbps: list[str] = []
         self.df_affinity: Optional[pandas.DataFrame] = None
         self._base_to_index = {"A": 0, "C": 1, "G": 2, "T": 3}
-
-    def _ensure_cleaned_data_dir(self) -> None:
-        """Ensure cleaned data directory exists."""
-        self.cleaned_data_dir.mkdir(parents=True, exist_ok=True)
-
-    def _get_cleaned_data_path(self) -> Path:
-        """Get path to cleaned data CSV file.
-
-        Returns
-        -------
-        Path
-            Path to cleaned data CSV file.
-        """
-        return self.cleaned_data_dir / "processed_affinity_data.csv"
-
-    def _cleaned_data_exists(self) -> bool:
-        """Check if cleaned data CSV already exists.
-
-        Returns
-        -------
-        bool
-            True if cleaned data CSV exists.
-        """
-        return self._get_cleaned_data_path().exists()
-
-    def _load_cleaned_data(self) -> pandas.DataFrame:
-        """Load cleaned data from CSV.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Processed affinity dataframe.
-
-        Raises
-        ------
-        FileNotFoundError
-            If cleaned data file does not exist.
-        """
-        cleaned_path = self._get_cleaned_data_path()
-        if not cleaned_path.exists():
-            raise FileNotFoundError(f"Cleaned data not found at {cleaned_path}")
-        print(f"Loading cleaned data from {cleaned_path}")
-        return pandas.read_csv(cleaned_path)
-
-    def _save_cleaned_data(self, df: pandas.DataFrame) -> None:
-        """Save processed dataframe to CSV.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Processed affinity dataframe to save.
-        """
-        self._ensure_cleaned_data_dir()
-        cleaned_path = self._get_cleaned_data_path()
-        print(f"Saving cleaned data to {cleaned_path}")
-        df.to_csv(cleaned_path, index=False)
-
-    def _validate_data_quality(self, df: pandas.DataFrame) -> None:
-        """Perform smart data quality checks.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Dataframe to validate.
-
-        Raises
-        ------
-        ValueError
-            If data quality checks fail.
-        """
-        # Check for missing values
-        missing_counts = df.isnull().sum()
-        if missing_counts.any():
-            raise ValueError(
-                f"Found missing values:\n{missing_counts[missing_counts > 0]}"
-            )
-
-        # Check for duplicate rows (excluding DNA_onehot which is array-like)
-        subset_cols = [c for c in df.columns if c != "DNA_onehot"]
-        duplicates = df[subset_cols].duplicated().sum()
-        if duplicates > 0:
-            warnings.warn(f"Found {duplicates} duplicate rows in data")
-
-        # Check affinity ranges
-        if (df["Affinity"] == 0).all():
-            warnings.warn("All affinity values are 0 - check input data")
-
-        # Validate DNA sequences
-        if "DNA probe" in df.columns:
-            invalid_bases = df["DNA probe"].str.contains("[^ACGT]", regex=True).any()
-            if invalid_bases:
-                raise ValueError("Found invalid DNA bases (expected A, C, G, T only)")
-
-        # Check one-hot encoding shape
-        if "DNA_onehot" in df.columns:
-            sample_encoding = df["DNA_onehot"].iloc[0]
-            if isinstance(sample_encoding, np.ndarray):
-                if sample_encoding.shape != (self.sequence_length, 4):
-                    raise ValueError(
-                        f"Invalid one-hot encoding shape: {sample_encoding.shape}, "
-                        f"expected ({self.sequence_length}, 4)"
-                    )
-
-        print("✓ Data quality validation passed")
-
 
     def load_sequences(self) -> list[str]:
         """Load DNA sequences from file.
@@ -318,10 +208,7 @@ class DNAAffinityDataProcessor:
         return one_hot
 
     def process(self) -> pandas.DataFrame:
-        """Execute full data processing pipeline with intelligent caching.
-
-        Checks if cleaned data CSV already exists. If it does, loads from cache.
-        Otherwise, processes raw data, validates quality, saves to CSV, and returns.
+        """Execute full data processing pipeline.
 
         Returns
         -------
@@ -338,13 +225,6 @@ class DNAAffinityDataProcessor:
         ValueError
             If any validation step fails.
         """
-        # Check if cleaned data already exists
-        if self._cleaned_data_exists():
-            self.df_affinity = self._load_cleaned_data()
-            return self.df_affinity
-
-        print("Processing raw data...")
-
         # Load raw data
         self.load_sequences()
         self.load_dbps()
@@ -361,12 +241,6 @@ class DNAAffinityDataProcessor:
 
         # Add one-hot encoded sequences to dataframe
         self.df_affinity = self.df_affinity.assign(DNA_onehot=list(one_hot))
-
-        # Validate data quality
-        self._validate_data_quality(self.df_affinity)
-
-        # Save cleaned data
-        self._save_cleaned_data(self.df_affinity)
 
         return self.df_affinity
 

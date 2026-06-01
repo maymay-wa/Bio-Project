@@ -1,3 +1,4 @@
 venv*
 .venv*Data/training_data.txt
 Data/training_data.txt
+cleaned_data/processed_affinity_data.csv
