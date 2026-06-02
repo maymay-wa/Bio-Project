@@ -11,8 +11,6 @@ import os
 # ============================================================================
 SIZE_SEQS = 5000          # Number of rows from training_seqs.txt
 SIZE_DBPS = 50            # Number of rows from training_DBPs.txt
-SIZE_DATA_ROWS = 5000     # Number of rows from training_data.txt
-SIZE_DATA_COLS = 50       # Number of columns from training_data.txt
 
 # ============================================================================
 # File paths
@@ -85,7 +83,7 @@ if __name__ == "__main__":
     print(f"\nConfiguration:")
     print(f"  Seqs rows: {SIZE_SEQS}")
     print(f"  DBPs rows: {SIZE_DBPS}")
-    print(f"  Data rows: {SIZE_DATA_ROWS}, columns: {SIZE_DATA_COLS}")
+    print(f"  Data rows: {SIZE_SEQS}, columns: {SIZE_DBPS}")
     print()
     
     success = True
@@ -110,8 +108,8 @@ if __name__ == "__main__":
     success &= shrink_file_rows_cols(
         input_data, 
         output_data, 
-        SIZE_DATA_ROWS, 
-        SIZE_DATA_COLS, 
+        SIZE_SEQS, 
+        SIZE_DBPS, 
         "training_data.txt"
     )
     
