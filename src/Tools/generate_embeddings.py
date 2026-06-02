@@ -12,7 +12,10 @@ tokenizer = BertTokenizer.from_pretrained("Rostlab/prot_bert", do_lower_case=Fal
 model = BertModel.from_pretrained("Rostlab/prot_bert")
 
 def get_protbert_embedding(sequence):
-    """Generate ProtBERT embedding for a protein sequence."""
+    """Generate ProtBERT embedding for a protein sequence.
+    
+    Note: This function is designed for PROTEIN sequences only, not DNA.
+    """
     # 2. Format: Add spaces and handle rare/unknown amino acids
     spaced_seq = " ".join(list(sequence))
     spaced_seq = re.sub(r"[UZOB]", "X", spaced_seq)
@@ -92,33 +95,37 @@ def generate_embeddings_csv(input_file, output_file, label_file=None):
 
 
 if __name__ == "__main__":
-    # Example usage - modify these paths as needed
+    # Generate embeddings for PROTEIN sequences (DBPs) only
+    # For DNA sequence embeddings, use a separate DNA embedding tool
     
-    # For training data
     project_dir = Path(__file__).parent.parent.parent
     
-    # Generate embeddings for training sequences
-    train_label_file = project_dir / "Data" / "training_DBPs.txt"
-    train_label_file_output = project_dir / "Data" / "training_DBPs_embedded.txt"
+    # Generate embeddings for training proteins (DNA-Binding Proteins)
+    train_dbp_file = project_dir / "Data" / "training_DBPs.txt"
+    train_output = project_dir / "Data" / "training_DBPs_embedded.csv"
     
-    if train_label_file.exists():
+    if train_dbp_file.exists():
         print("\n" + "="*60)
-        print("GENERATING TRAINING EMBEDDINGS")
+        print("GENERATING TRAINING PROTEIN EMBEDDINGS")
         print("="*60)
         generate_embeddings_csv(
-            str(train_label_file),
-            str(train_label_file_output)
+            str(train_dbp_file),
+            str(train_output)
         )
+    else:
+        print(f"Warning: {train_dbp_file} not found")
     
-    # Generate embeddings for test sequences
-    test_label_file = project_dir / "Data" / "test_DBPs.txt"
-    test_label_file_output = project_dir / "Data" / "test_DBPs_embedded.txt"
+    # Generate embeddings for test proteins (DNA-Binding Proteins)
+    test_dbp_file = project_dir / "Data" / "test_DBPs.txt"
+    test_output = project_dir / "Data" / "test_DBPs_embedded.csv"
     
-    if test_label_file.exists():
+    if test_dbp_file.exists():
         print("\n" + "="*60)
-        print("GENERATING TEST EMBEDDINGS")
+        print("GENERATING TEST PROTEIN EMBEDDINGS")
         print("="*60)
         generate_embeddings_csv(
-            str(test_label_file),
-            str(test_label_file_output)
+            str(test_dbp_file),
+            str(test_output)
         )
+    else:
+        print(f"Warning: {test_dbp_file} not found")
